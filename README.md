@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # IWR6843ISK-ODS + DCA1000 offline processing (skeleton)
 
 ## Current project stage
@@ -100,3 +101,6 @@ If present, `test_trim_and_plot.py` is **legacy / exploratory** and not the form
 ## Safety wording
 
 Comments and figures use **DEBUG / UNVERIFIED** or **EXPLORATORY** unless `config_verified` is true — this does **not** replace physical validation; it only changes labels.
+=======
+# egoooooowv
+>>>>>>> ab7e7dad50a2d1b13e6044249e3aa0db2b4a6014
