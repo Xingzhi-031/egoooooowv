@@ -1,0 +1,13 @@
+{
+  "num_adc_samples": 256,
+  "num_rx": 4,
+  "num_tx": 3,
+  "num_loops": 32,
+  "chirps_per_frame": null,
+  "is_complex": false,
+  "sample_rate_hz": null,
+  "freq_slope_hz_per_s": null,
+  "notes": "Placeholder values — replace with values from your TI profile / capture session.",
+  "source": "configs/example_radar.json",
+  "config_verified": false
+}

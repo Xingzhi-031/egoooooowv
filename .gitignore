@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.pytest_cache/
+.mypy_cache/
+
+# Local captures (large) — remove this line if you intend to commit .bin
+*.bin
+
+# IDE
+.idea/
+.vscode/
+
+# Root-level ad-hoc images (not part of pipeline)
+/*.jpg
+/*.png
+
+# Generated figures (regenerate with scripts)
+outputs/figures/*.png
