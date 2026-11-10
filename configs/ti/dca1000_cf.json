@@ -1,0 +1,35 @@
+{
+  "DCA1000Config": {
+    "dataLoggingMode": "raw",
+    "dataTransferMode": "LVDSCapture",
+    "dataCaptureMode": "ethernetStream",
+    "lvdsMode": 2,
+    "dataFormatMode": 3,
+    "packetDelay_us": 25,
+    "ethernetConfig": {
+      "DCA1000IPAddress": "192.168.33.180",
+      "DCA1000ConfigPort": 4096,
+      "DCA1000DataPort": 4098
+    },
+    "ethernetConfigUpdate": {
+      "systemIPAddress": "192.168.33.30",
+      "DCA1000IPAddress": "192.168.33.180",
+      "DCA1000MACAddress": "12.34.56.78.90.12",
+      "DCA1000ConfigPort": 4096,
+      "DCA1000DataPort": 4098
+    },
+    "captureConfig": {
+      "fileBasePath": "C:\\ti\\mmwave_studio_02_01_01_00\\mmWaveStudio\\PostProc",
+      "filePrefix": "egowave_trial_01",
+      "maxRecFileSize_MB": 1024,
+      "sequenceNumberEnable": 1,
+      "captureStopMode": "duration",
+      "durationToCapture_ms": 5000
+    },
+    "dataFormatConfig": {
+      "MSBToggle": 0,
+      "reorderEnable": 1,
+      "laneFmtMap": 0
+    }
+  }
+}

@@ -6,7 +6,14 @@
   "chirps_per_frame": 96,
   "is_complex": true,
   "iq_interleave": "rx_major",
-  "notes": "TX order in stream per loop: TX1, TX3, TX2. If plots still flat, set iq_interleave to sample_rx and re-run debug_parse_pipeline.py --try-layouts",
-  "source": "configs/ods_iq_frames.json",
+  "iq_order": "QI",
+  "tx_stream_order": [0, 2, 1],
+  "sample_rate_hz": 12500000,
+  "freq_slope_hz_per_s": 166000000000000,
+  "start_freq_hz": 60000000000,
+  "chirp_cycle_s": 0.000031,
+  "frame_period_s": 0.1,
+  "notes": "Matches the 2026-03-28 (ods_dca_clean) and 2026-04-01 (egowave_trial_01) captures. Layout rx_major + QI and 96 chirps/frame are supported by the data checks in docs/DATA_FORMAT.md; frame period 0.1 s is inferred. Range axis not yet checked against a reflector at a known distance.",
+  "source": "configs/ti/iwr6843ods_capture_32loops_reconstructed.cfg",
   "config_verified": false
 }

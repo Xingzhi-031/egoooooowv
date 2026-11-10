@@ -6,9 +6,14 @@
   "chirps_per_frame": 192,
   "is_complex": true,
   "iq_interleave": "rx_major",
+  "iq_order": "QI",
+  "tx_stream_order": [0, 2, 1],
   "sample_rate_hz": 12500000,
   "freq_slope_hz_per_s": 166000000000000,
-  "notes": "raw_capture.cfg frameCfg 0 2 64 0 50 1 0 => numLoops=64, chirps 0..2 => 192 chirps/frame. profileCfg ... 166 ... 256 12500 => slope const 166 (TI units; TODO confirm Hz/s in Studio), digOutSampleRate 12500 ksps = 12.5 Msps. TDM stream per loop: txEnable 1,4,2 => TX0,TX2,TX1 (same permutation as ods_iq_frames). cf.json: dataFormatMode 3, reorderEnable 1. Old .bin captured with 32 loops must use ods_iq_frames.json (96 cpf), not this file.",
-  "source": "raw_capture.cfg + cf.json",
+  "start_freq_hz": 60000000000,
+  "chirp_cycle_s": 0.000031,
+  "frame_period_s": 0.05,
+  "notes": "For the PROPOSED 64-loop / 20 Hz profile (configs/ti/iwr6843ods_proposed_64loops.cfg). No capture with this profile exists in the repo; the two .bin files used 32 loops -> use ods_iq_frames.json.",
+  "source": "configs/ti/iwr6843ods_proposed_64loops.cfg",
   "config_verified": false
 }

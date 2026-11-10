@@ -7,16 +7,19 @@ venv/
 .pytest_cache/
 .mypy_cache/
 
-# Local captures (large) — remove this line if you intend to commit .bin
+# Raw captures are large and belong to the lab; keep them out of git
 *.bin
 
 # IDE
 .idea/
 .vscode/
 
-# Root-level ad-hoc images (not part of pipeline)
+# Root-level ad-hoc images / local-only notes
 /*.jpg
 /*.png
+/cf.json
+/raw_capture.cfg
 
-# Generated figures (regenerate with scripts)
+# Generated output (regenerate with scripts); curated figures live in docs/figures
 outputs/figures/*.png
+outputs/analysis/
