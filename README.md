@@ -1,117 +1,102 @@
-# IWR6843ISK-ODS + DCA1000 offline processing (skeleton)
+# IWR6843ISK-ODS + DCA1000 raw-data toolkit
 
-## Current project stage
+Offline Python tools for raw ADC captures from a TI **IWR6843ISK-ODS** 60 GHz FMCW radar recorded with a **DCA1000EVM**.
 
-This repository is a **minimal, modular skeleton** for offline processing of **raw DCA1000-captured** binary data from **IWR6843ISK-ODS**. It is **not** a fully validated radar pipeline.
+| Stage | What it does |
+|---|---|
+| Parse | `.bin` → ADC cube |
+| Frame | ADC cube → frame / loop / TX tensor |
+| Range | range profiles |
+| Range-Doppler | RD maps in physical units |
+| Capture check | consistency checks that settle the binary layout from the data itself |
 
-**We are in: raw binary parsing and format validation.**
+Written for a head-mounted, near-field sensing project during a research-assistant position at the School of Computing, Macquarie University (Nov 2025 – May 2026).
 
-Do **not** assume:
+## Status
 
-- FFT outputs are already “reliable range”
-- `.bin` layout is fully verified
-- real vs IQ is confirmed
-- chirp / RX / TX ordering is confirmed
+| Part | State |
+|---|---|
+| Binary layout (complex, RX-major, Q-first, 2048 int16 per chirp) | **confirmed** on two captures; see [docs/DATA_FORMAT.md](docs/DATA_FORMAT.md) |
+| Frame structure (96 chirps = 32 loops × 3 TX, TX order 0-2-1) | confirmed from cfg; frame length inferred from the data |
+| Range FFT, framed range-Doppler map, metre / m/s axes | working; axes are **computed from cfg, not yet reflector-checked** |
+| Synthetic end-to-end tests | 9 tests passing (`pytest`) |
+| Angle processing, point cloud, detection, learning | not started (out of scope for this stage) |
 
-Anything that depends on mmWave **cfg** or **capture-side format** is either **configurable via JSON** or marked **TODO** in code.
+Milestones and what is left: [docs/PIPELINE.md](docs/PIPELINE.md).
+Profile parameters and derived resolutions: [docs/RADAR_CONFIG.md](docs/RADAR_CONFIG.md).
 
-## Intended milestone order
+![range profile](docs/figures/ods_dca_clean_range_profile.png)
 
-1. **Confirm raw format** — align JSON parameters with TI profile / capture settings; fix parsing assumptions.
-2. **Reliable range FFT** — reflector test + optional range axis; set `config_verified` only after deliberate validation.
-3. **Single-RX range–Doppler map** — exploratory RD heatmap; not claimed physically correct until timing/cfg checks pass.
+## Setup
 
-**Deferred in this phase:** angle processing, virtual array, beamforming, point cloud.
+```bash
+python -m pip install -r requirements.txt     # Python 3.11+, numpy, matplotlib, pytest
+python -m pytest -q                             # synthetic checks
+```
+
+Run the scripts from the repository root. Raw `.bin` files are not in git; put them in `data/raw/`.
+
+## Usage
+
+```bash
+# 1. Read a TI CLI profile and print the derived resolutions (optional: write a JSON sidecar)
+python scripts/ti_cfg.py configs/ti/iwr6843ods_capture_32loops_reconstructed.cfg
+
+# 2. Check a capture: layout scores, zero chirps, frame evidence, range/RD figures + report.md
+python scripts/analyze_capture.py data/raw/capture.bin --config configs/ods_iq_frames.json --out outputs/analysis/run01
+
+# 3. Parse only
+python scripts/parse_bin.py data/raw/capture.bin --config configs/ods_iq_frames.json
+
+# 4. Range-Doppler map of one frame / TX / RX (Doppler over the 32 loops of that TX)
+python scripts/build_rd_map.py data/raw/capture.bin --config configs/ods_iq_frames.json \
+       --framed --drop-partial-frames --frame 0 --tx-canonical 0 --rx 0 --max-range 4 \
+       --output outputs/figures/rd.png
+
+# 5. Single-chirp range FFT diagnostic
+python scripts/validate_range_fft.py data/raw/capture.bin --config configs/ods_iq_frames.json --chirp 0 --rx 0
+```
+
+Debug helpers, not part of the formal path:
+- `scripts/debug_parse_pipeline.py --try-layouts`
+- `scripts/debug_parse_compare.py`
+- `test_trim_and_plot.py` (the first exploratory script, March 2026)
 
 ## Layout
 
 ```
-.
-├── configs/
-│   └── example_radar.json    # template JSON — copy per capture
-├── data/
-│   ├── raw/                  # place .bin captures here (not tracked by default)
-│   ├── cfg/                  # optional: mirror of TI .cfg exports
-│   └── metadata/             # run notes, JSON sidecars, etc.
-├── outputs/
-│   └── figures/              # script-generated PNGs
-├── scripts/
-│   ├── config_loader.py       # RadarConfig + JSON load (TODO: TI .cfg)
-│   ├── parse_bin.py           # int16 → chirp cube; IQ: `sample_rx` or `rx_major`
-│   ├── iq_frame_tensor.py     # chirp cube → [F,L,T,R,S], TX1/TX3/TX2 → canonical order
-│   ├── debug_parse_pipeline.py # staged prints (raw → IQ → frames → FFT energy)
-│   ├── validate_range_fft.py  # single-chirp RX range FFT diagnostic
-│   ├── build_rd_map.py        # RD map; add `--framed` for single-TX TDM Doppler
-│   └── debug_parse_compare.py # real vs IQ compare
-├── requirements.txt
-└── README.md
+configs/
+  ods_iq_frames.json          parser sidecar for the 32-loop captures (use this)
+  from_raw_capture.json       sidecar for the proposed 64-loop profile
+  example_radar.json          template
+  ti/                         TI CLI profiles + DCA1000 cf.json
+scripts/
+  config_loader.py            RadarConfig (+ derived range/velocity resolution)
+  ti_cfg.py                   TI .cfg -> RadarConfig
+  parse_bin.py                int16 stream -> (chirp, sample, rx); zero-chirp detection
+  iq_frame_tensor.py          -> (frame, loop, tx, rx, sample); TX reorder; zero-chirp fill
+  build_rd_map.py             range-Doppler maps
+  validate_range_fft.py       range FFT diagnostic
+  analyze_capture.py          data-driven layout / frame checks + figures + report
+tests/                        synthetic TDM-MIMO round trip and RD peak tests
+docs/                         data format, pipeline status, radar configuration, figures
+data/raw|cfg|metadata/        local captures (git-ignored)
 ```
 
-## Setup
-
-- Python **3.11+**
-- `pip install -r requirements.txt`
-
-Run all CLI commands from the **repository root** so imports resolve (`scripts` package).
-
-## How to run
-
-Replace paths with your files. Use a **copy** of `configs/example_radar.json` with values that match your capture (when known).
-
-### Parse `.bin` (formal path = `is_complex` in JSON)
-
-```bash
-python scripts/parse_bin.py path/to/capture.bin --config configs/my_radar.json
-```
-
-### Range FFT diagnostic (DEBUG / UNVERIFIED unless you validated)
-
-```bash
-python scripts/validate_range_fft.py path/to/capture.bin --config configs/my_radar.json --chirp 0 --rx 0 --output outputs/figures/range_fft.png
-```
-
-### Single-RX range–Doppler map (exploratory)
-
-```bash
-python scripts/build_rd_map.py path/to/capture.bin --config configs/my_radar.json --rx 0 --output outputs/figures/rd_map.png
-```
-
-### Developer: compare real vs IQ parsing (not formal pipeline)
-
-```bash
-python scripts/debug_parse_compare.py path/to/capture.bin --config configs/my_radar.json --output outputs/figures/compare.png
-```
-
-**Note:** `debug_parse_compare.py` ignores `is_complex` and runs **both** parsers for comparison.
-
-### IQ + frame / TX order (`configs/ods_iq_frames.json`)
-
-- Set `is_complex: true` and `chirps_per_frame: 96` (3×32).
-- `iq_interleave`: `"rx_major"` (per-RX I,Q blocks) or `"sample_rx"` (global I,Q then reshape S×R). If RD is flat or near-zero, run  
-  `python scripts/debug_parse_pipeline.py your.bin --config configs/ods_iq_frames.json --try-layouts`  
-  and pick the layout with sane `max|cube|` / energy.  
-  If `num_chirps % 96 != 0`, add **`--drop-partial-frames`** to drop the incomplete tail and run frame stages (e.g. your file: 2908 chirps → 30×96, drop 28).
-- Stream TX order per loop is **TX1 → TX3 → TX2**; code maps to canonical **TX1, TX2, TX3** for `--framed` RD.
-- **Framed RD** (Doppler only across 32 loops for one TX):  
-  `py -3 scripts/build_rd_map.py your.bin --config configs/ods_iq_frames.json --framed --drop-partial-frames --tx-canonical 0 --rx 0 --output outputs/figures/rd_framed.png`
-
-## JSON fields (`RadarConfig`)
+## `RadarConfig` fields (JSON)
 
 | Field | Meaning |
-|--------|--------|
-| `num_adc_samples` | ADC samples per chirp |
-| `num_rx` | RX channels |
-| `num_tx`, `num_loops` | Used to reason about chirps; `chirps_per_frame` defaults to `num_tx * num_loops` if omitted |
-| `is_complex` | If `true`, I/Q int16 interleaving |
-| `iq_interleave` | `"sample_rx"` or `"rx_major"` (TI LVDS often `rx_major`) |
-| `chirps_per_frame` | e.g. `96` for 3×32; required for frame tensor / `--framed` |
-| `sample_rate_hz`, `freq_slope_hz_per_s` | Optional range-in-meters in diagnostics |
-| `config_verified` | Manual flag only — set after **your** validation process |
+|---|---|
+| `num_adc_samples`, `num_rx`, `num_tx`, `num_loops`, `chirps_per_frame` | capture geometry |
+| `is_complex` | complex (IQ) vs. real ADC output |
+| `iq_interleave` | `rx_major` (TI chanInterleave = 1) or `sample_rx` (= 0) |
+| `iq_order` | `QI` (TI sampleSwap = 1) or `IQ` (= 0) |
+| `tx_stream_order` | TX fired in each chirp slot of a loop, e.g. `[0, 2, 1]` |
+| `sample_rate_hz`, `freq_slope_hz_per_s`, `start_freq_hz`, `chirp_cycle_s`, `frame_period_s` | used for metre / m/s axes |
+| `config_verified` | set manually only after a reflector test |
 
-## Exploratory script
+## History
 
-If present, `test_trim_and_plot.py` is **legacy / exploratory** and not the formal pipeline.
-
-## Safety wording
-
-Comments and figures use **DEBUG / UNVERIFIED** or **EXPLORATORY** unless `config_verified` is true — this does **not** replace physical validation; it only changes labels.
+See [CHANGELOG.md](CHANGELOG.md).
+- March–April 2026: written during the RA position.
+- November 2026: reviewed and corrected at hand-over.
