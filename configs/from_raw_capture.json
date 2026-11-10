@@ -1,0 +1,14 @@
+{
+  "num_adc_samples": 256,
+  "num_rx": 4,
+  "num_tx": 3,
+  "num_loops": 64,
+  "chirps_per_frame": 192,
+  "is_complex": true,
+  "iq_interleave": "rx_major",
+  "sample_rate_hz": 12500000,
+  "freq_slope_hz_per_s": 166000000000000,
+  "notes": "raw_capture.cfg frameCfg 0 2 64 0 50 1 0 => numLoops=64, chirps 0..2 => 192 chirps/frame. profileCfg ... 166 ... 256 12500 => slope const 166 (TI units; TODO confirm Hz/s in Studio), digOutSampleRate 12500 ksps = 12.5 Msps. TDM stream per loop: txEnable 1,4,2 => TX0,TX2,TX1 (same permutation as ods_iq_frames). cf.json: dataFormatMode 3, reorderEnable 1. Old .bin captured with 32 loops must use ods_iq_frames.json (96 cpf), not this file.",
+  "source": "raw_capture.cfg + cf.json",
+  "config_verified": false
+}

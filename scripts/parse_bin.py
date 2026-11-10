@@ -57,8 +57,17 @@ def parse_real_adc(raw: np.ndarray, cfg: RadarConfig) -> np.ndarray:
     return trimmed.reshape(num_chirps, cfg.num_adc_samples, cfg.num_rx).astype(np.float32)
 
 
+def int16_pairs_to_complex(pairs_i: np.ndarray, pairs_q: np.ndarray) -> np.ndarray:
+    return pairs_i.astype(np.float32) + 1j * pairs_q.astype(np.float32)
+
+
 def parse_complex_iq_adc(raw: np.ndarray, cfg: RadarConfig) -> np.ndarray:
-    # TODO: confirm I,Q interleave and reshape order vs TI
+    """
+    IQ: int16 layout [I0,Q0,I1,Q1,...] per TI packing variant.
+
+    - sample_rx: 1024 complexes per chirp in (sample, rx) C-order (rx fastest).
+    - rx_major: per RX, 256 (I,Q) pairs contiguous — common on LVDS.
+    """
     block_int16 = int16_per_chirp_complex(cfg)
     trimmed, _ = _trim_to_multiple(raw, block_int16)
     if trimmed.size % 2 != 0:
@@ -71,11 +80,24 @@ def parse_complex_iq_adc(raw: np.ndarray, cfg: RadarConfig) -> np.ndarray:
         raise ValueError(
             f"IQ ADC: trimmed length {trimmed.size} not divisible by int16_per_chirp={block_int16}"
         )
-    i = trimmed[0::2].astype(np.float32)
-    q = trimmed[1::2].astype(np.float32)
-    iq = i + 1j * q
-    num_chirps = iq.size // (cfg.num_adc_samples * cfg.num_rx)
-    return iq.reshape(num_chirps, cfg.num_adc_samples, cfg.num_rx).astype(np.complex64)
+    n_ch = trimmed.size // block_int16
+    rows = trimmed.reshape(n_ch, block_int16)
+    layout = getattr(cfg, "iq_interleave", "sample_rx")
+
+    if layout == "rx_major":
+        seg = rows.reshape(n_ch, cfg.num_rx, 2 * cfg.num_adc_samples)
+        i_part = seg[:, :, 0::2]
+        q_part = seg[:, :, 1::2]
+        iq = int16_pairs_to_complex(i_part, q_part)
+        return np.ascontiguousarray(iq.transpose(0, 2, 1)).astype(np.complex64)
+
+    if layout == "sample_rx":
+        i_part = rows[:, 0::2]
+        q_part = rows[:, 1::2]
+        iq = int16_pairs_to_complex(i_part, q_part)
+        return iq.reshape(n_ch, cfg.num_adc_samples, cfg.num_rx).astype(np.complex64)
+
+    raise ValueError(f"Unknown iq_interleave: {layout!r}; use 'sample_rx' or 'rx_major'")
 
 
 def parse_adc_cube(bin_path: Path, cfg: RadarConfig) -> tuple[np.ndarray, dict[str, int]]:

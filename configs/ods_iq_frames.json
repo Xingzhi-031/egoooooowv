@@ -1,0 +1,12 @@
+{
+  "num_adc_samples": 256,
+  "num_rx": 4,
+  "num_tx": 3,
+  "num_loops": 32,
+  "chirps_per_frame": 96,
+  "is_complex": true,
+  "iq_interleave": "rx_major",
+  "notes": "TX order in stream per loop: TX1, TX3, TX2. If plots still flat, set iq_interleave to sample_rx and re-run debug_parse_pipeline.py --try-layouts",
+  "source": "configs/ods_iq_frames.json",
+  "config_verified": false
+}

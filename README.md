@@ -36,11 +36,13 @@ Anything that depends on mmWave **cfg** or **capture-side format** is either **c
 ├── outputs/
 │   └── figures/              # script-generated PNGs
 ├── scripts/
-│   ├── config_loader.py      # RadarConfig + JSON load (TODO: TI .cfg)
-│   ├── parse_bin.py          # formal parse path + exploratory helpers
-│   ├── validate_range_fft.py # single-chirp RX range FFT diagnostic
-│   ├── build_rd_map.py       # single-RX RD map
-│   └── debug_parse_compare.py# developer-only real vs IQ compare
+│   ├── config_loader.py       # RadarConfig + JSON load (TODO: TI .cfg)
+│   ├── parse_bin.py           # int16 → chirp cube; IQ: `sample_rx` or `rx_major`
+│   ├── iq_frame_tensor.py     # chirp cube → [F,L,T,R,S], TX1/TX3/TX2 → canonical order
+│   ├── debug_parse_pipeline.py # staged prints (raw → IQ → frames → FFT energy)
+│   ├── validate_range_fft.py  # single-chirp RX range FFT diagnostic
+│   ├── build_rd_map.py        # RD map; add `--framed` for single-TX TDM Doppler
+│   └── debug_parse_compare.py # real vs IQ compare
 ├── requirements.txt
 └── README.md
 ```
@@ -82,6 +84,17 @@ python scripts/debug_parse_compare.py path/to/capture.bin --config configs/my_ra
 
 **Note:** `debug_parse_compare.py` ignores `is_complex` and runs **both** parsers for comparison.
 
+### IQ + frame / TX order (`configs/ods_iq_frames.json`)
+
+- Set `is_complex: true` and `chirps_per_frame: 96` (3×32).
+- `iq_interleave`: `"rx_major"` (per-RX I,Q blocks) or `"sample_rx"` (global I,Q then reshape S×R). If RD is flat or near-zero, run  
+  `python scripts/debug_parse_pipeline.py your.bin --config configs/ods_iq_frames.json --try-layouts`  
+  and pick the layout with sane `max|cube|` / energy.  
+  If `num_chirps % 96 != 0`, add **`--drop-partial-frames`** to drop the incomplete tail and run frame stages (e.g. your file: 2908 chirps → 30×96, drop 28).
+- Stream TX order per loop is **TX1 → TX3 → TX2**; code maps to canonical **TX1, TX2, TX3** for `--framed` RD.
+- **Framed RD** (Doppler only across 32 loops for one TX):  
+  `py -3 scripts/build_rd_map.py your.bin --config configs/ods_iq_frames.json --framed --drop-partial-frames --tx-canonical 0 --rx 0 --output outputs/figures/rd_framed.png`
+
 ## JSON fields (`RadarConfig`)
 
 | Field | Meaning |
@@ -89,7 +102,9 @@ python scripts/debug_parse_compare.py path/to/capture.bin --config configs/my_ra
 | `num_adc_samples` | ADC samples per chirp |
 | `num_rx` | RX channels |
 | `num_tx`, `num_loops` | Used to reason about chirps; `chirps_per_frame` defaults to `num_tx * num_loops` if omitted |
-| `is_complex` | If `true`, I/Q int16 interleaving (see `parse_bin.py` docstrings) |
+| `is_complex` | If `true`, I/Q int16 interleaving |
+| `iq_interleave` | `"sample_rx"` or `"rx_major"` (TI LVDS often `rx_major`) |
+| `chirps_per_frame` | e.g. `96` for 3×32; required for frame tensor / `--framed` |
 | `sample_rate_hz`, `freq_slope_hz_per_s` | Optional range-in-meters in diagnostics |
 | `config_verified` | Manual flag only — set after **your** validation process |
 

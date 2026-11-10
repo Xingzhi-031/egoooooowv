@@ -19,6 +19,8 @@ class RadarConfig:
     # TODO: confirm vs cfg; if None -> num_tx * num_loops
     chirps_per_frame: int | None = None
     is_complex: bool = False
+    #: IQ int16 layout per chirp: "sample_rx" (pair order matches reshape S,R) or "rx_major" (per-RX I,Q blocks)
+    iq_interleave: str = "sample_rx"
     # TODO: map from cfg (e.g. digOutSampleRate)
     sample_rate_hz: float | None = None
     # TODO: map from cfg (e.g. freqSlope)
@@ -59,6 +61,7 @@ def load_radar_config_json(path: Path) -> RadarConfig:
         num_loops=int(data["num_loops"]),
         chirps_per_frame=chirps,
         is_complex=bool(data.get("is_complex", False)),
+        iq_interleave=str(data.get("iq_interleave", "sample_rx")),
         sample_rate_hz=_optional_float(data.get("sample_rate_hz")),
         freq_slope_hz_per_s=_optional_float(data.get("freq_slope_hz_per_s")),
         notes=str(data.get("notes", "")),
